@@ -5,7 +5,7 @@
   # Datsugoku GUI
 
   <p align="center">
-    <b>Professional Desktop Control Suite & Kernel Input Remapper for Jio Android TV (JHSC200 / JHSD200)</b>
+    <b>All-in-One Desktop Station: Day 0 ACS Jailbreak, Autonomous Radar, Kernel Remapping & System Management for Jio STB (JHSC200 / JHSD200)</b>
   </p>
 
   <p align="center">
@@ -21,15 +21,16 @@
   </p>
 
   <p align="center">
-    <a href="https://github.com/RookieEnough/Datsugoku-GUI/releases/latest"><b>Download Executable (v1.0.0)</b></a> •
+    <a href="https://github.com/RookieEnough/Datsugoku-GUI/releases/latest"><b>Download Standalone Exe</b></a> •
     <a href="#architectural-overview">Architecture</a> •
     <a href="#key-engineering-features">Key Features</a> •
     <a href="#installation--setup">Installation</a> •
-    <a href="#troubleshooting--diagnostics">Troubleshooting</a>
+    <a href="#community--donations">Support & Community</a> •
+    <a href="#educational--legal-disclaimer">Disclaimer</a>
   </p>
 
   <p align="center">
-    An open-source desktop control station, diagnostic suite, and kernel input remapper designed for the <b>Jio Set-Top Box (JHSC200 / JHSD200)</b> running Android TV 9.0 (Pie). Datsugoku GUI provides a centralized, non-root management interface to unlock restricted hardware features, redirect hardcoded remote control buttons, resolve OEM firmware limitations, monitor real-time system performance, and batch sideload third-party applications over local ADB networks.
+    An all-in-one open-source desktop control station and exploit automation suite designed for the <b>Jio Set-Top Box (JHSC200 / JHSD200)</b> running Android TV 9.0 (Pie). Datsugoku GUI manages the entire device lifecycle: from Day 0 out-of-the-box ACS/TR-069 exploitation (eMudhra TLS cert minting, DNS spoof guidance, and GenieACS task queueing) to post-unlock autonomous radar connection, physical remote button remapping, essential system repairs, and batch APK sideloading.
   </p>
 
 </div>
@@ -38,13 +39,17 @@
 
 ## Visual Overview
 
-| Physical Remote Remapper | 1-Click Essential System Fixes |
+| Day 0 Jailbreak & ACS Unlock | Physical Remote Remapper |
 | :---: | :---: |
-| ![Remote Remapper](docs/screenshots/screenshot_remap.png) | ![Essential Fixes](docs/screenshots/screenshot_fixes.png) |
+| ![Day 0 Unlock](docs/screenshots/screenshot_unlock.png) | ![Remote Remapper](docs/screenshots/screenshot_remap.png) |
 
-| Autonomous Subnet Hunter | Performance & Memory Telemetry |
+| 1-Click Essential System Fixes | Autonomous Subnet Hunter |
 | :---: | :---: |
-| ![Subnet Hunter](docs/screenshots/screenshot_hunter.png) | ![Memory Gauge](docs/screenshots/screenshot_boost.png) |
+| ![Essential Fixes](docs/screenshots/screenshot_fixes.png) | ![Subnet Hunter](docs/screenshots/screenshot_hunter.png) |
+
+| Performance & Memory Telemetry | Batch APK Sideloading Pipeline |
+| :---: | :---: |
+| ![Memory Gauge](docs/screenshots/screenshot_boost.png) | ![APK Sideload](docs/screenshots/screenshot_apks.png) |
 
 ---
 
@@ -52,12 +57,14 @@
 
 - [Architectural Overview](#architectural-overview)
 - [Key Engineering Features](#key-engineering-features)
-  - [1. Kernel Input Event Remapping](#1-kernel-input-event-remapping)
-  - [2. Autonomous Subnet Hunter](#2-autonomous-subnet-hunter)
-  - [3. One-Click Essential System Repairs](#3-one-click-essential-system-repairs)
-  - [4. Real-Time Memory Telemetry & LMK Optimization](#4-real-time-memory-telemetry--lmk-optimization)
-  - [5. Batch APK Sideloading Pipeline](#5-batch-apk-sideloading-pipeline)
-  - [6. Material 3 Desktop Architecture](#6-material-3-desktop-architecture)
+  - [1. Day 0 STB Unlock (Stage 1 ACS Exploit Pipeline)](#1-day-0-stb-unlock-stage-1-acs-exploit-pipeline)
+  - [2. In-App Background Auto-Updater](#2-in-app-background-auto-updater)
+  - [3. Kernel Input Event Remapping](#3-kernel-input-event-remapping)
+  - [4. Autonomous Subnet Hunter](#4-autonomous-subnet-hunter)
+  - [5. One-Click Essential System Repairs](#5-one-click-essential-system-repairs)
+  - [6. Real-Time Memory Telemetry & LMK Optimization](#6-real-time-memory-telemetry--lmk-optimization)
+  - [7. Batch APK Sideloading Pipeline](#7-batch-apk-sideloading-pipeline)
+  - [8. Material 3 Desktop Architecture](#8-material-3-desktop-architecture)
 - [System Architecture](#system-architecture)
 - [Device Compatibility Matrix](#device-compatibility-matrix)
 - [Installation & Setup](#installation--setup)
@@ -65,6 +72,7 @@
   - [Option B: Running from Source](#option-b-running-from-source)
   - [Option C: Compiling with PyInstaller](#option-c-compiling-with-pyinstaller)
 - [Configuration Reference (`remap_config.conf`)](#configuration-reference-remap_configconf)
+- [Community & Donations](#community--donations)
 - [Troubleshooting & Diagnostics](#troubleshooting--diagnostics)
 - [Educational & Legal Disclaimer](#educational--legal-disclaimer)
 - [Credits & Acknowledgments](#credits--acknowledgments)
@@ -73,23 +81,42 @@
 
 ## Architectural Overview
 
-Jio Set-Top Box units (such as the SDMC DV8219 / JHSC200 / JHSD200) ship with heavily locked-down firmware environments:
-1. **Remote Button Hijacking:** Dedicated streaming buttons (Netflix, YouTube, Hotstar, Voot/JioCinema) transmit proprietary Linux input event codes bound to stock, locked applications.
-2. **Hidden System Settings:** Standard AOSP Bluetooth accessory discovery and pairing screens are hidden or blocked in favor of restricted OEM companion flows.
-3. **Audio & Voice Service Lockout:** Generic Bluetooth remotes with integrated microphones fail to bind to voice search intents due to missing framework permissions.
-4. **Network Transport Delays:** Static DHCP assignments or frequent reboots disconnect external ADB management connections.
+Jio Set-Top Box units (such as the SDMC DV8219 / JHSC200 / JHSD200) ship from the factory in a restricted, vendor-locked state:
+1. **Disabled ADB:** USB and network debugging are permanently disabled out of the box.
+2. **Remote Button Hijacking:** Dedicated streaming buttons (Netflix, YouTube, Hotstar, Voot/JioCinema) transmit proprietary Linux input event codes bound to stock OEM applications.
+3. **Hidden Settings & Disabled Voice:** Standard AOSP Bluetooth accessory discovery screens are blocked, and generic voice remotes fail to bind to voice search intents.
+4. **Firmware Lockdown (FOTA):** Silent over-the-air firmware upgrades overwrite user changes.
 
-**Datsugoku GUI** operates without modifying the system partition or tripping bootloader security. It functions entirely through userland ADB debugging protocols (`port 5555`) and persistent `/data/local/tmp` shell daemons.
+**Datsugoku GUI** bridges the entire journey in a single desktop application:
+* **Stage 1 (Initial Break-in):** Leverages the TR-069/CWMP phone-home protocol (`acs.oss.jio.com:8443`), forges intermediate CA chains, runs local TLS reverse proxying, and instructs GenieACS to permanently flip `Device.JioSTB.USB.USBDebugging=true`.
+* **Stage 2 (Post-Unlock Management):** Immediately catches the unlocked STB via autonomous subnet radar, manages kernel remote key hooks, applies system fixes, and batch sideloads third-party software.
 
 ---
 
 ## Key Engineering Features
 
-### 1. Kernel Input Event Remapping
-* **Zero-Root Operation:** Rather than replacing system framework binaries or decompiling APKs, the tool deploys `remap_listener.sh` directly to `/data/local/tmp/`.
-* **Low-Level Event Monitoring:** Reads raw input events from the remote controller character device node (`/dev/input/event5`) utilizing `getevent -l`.
-* **State Filtering & Debouncing:** Filters specifically for keycode down transitions (`value 1`) and discards duplicate release events (`value 0`) to prevent rapid-fire intent re-triggering.
-* **Intent Dispatch:** Launches configured applications via Android's internal `monkey -p <target_package> -c android.intent.category.LAUNCHER 1` execution path, bypassing default OEM package interceptors.
+### 1. Day 0 STB Unlock (Stage 1 ACS Exploit Pipeline)
+* **Automatic Host LAN Detection:** Automatically resolves and displays your host PC's primary LAN IP (e.g. `192.168.29.54`) with a 1-click **Copy IP** button for instant router DNS configuration.
+* **DNS Redirection Guidance:** Step-by-step visual guidance to redirect `acs.oss.jio.com` ➔ `[Your Host PC IP]` on your Wi-Fi router, mobile hotspot, or local DNS server (dnsmasq / Technitium).
+* **Live Service Health Monitor:** Real-time port and service diagnostic indicators checking:
+  * `Port 8443 (TLS Proxy)`
+  * `Port 7547 (GenieACS CWMP)`
+  * `Port 7557 (GenieACS NBI API)`
+  * `eMudhra Cert Chain` status (`tls/forged_chain.pem`)
+  * `Port 5555 (STB ADB Status)`
+* **1-Click eMudhra Cert Minting:** Built-in automation of `jhs/forge_emudhra_chain.py` recovering the compromised P-384 scalar ($d=156$) and generating valid TLS certificates that bypass STB trust store verification.
+* **1-Click Docker & TLS Proxy Controls:** Launch GenieACS via Docker Compose and toggle `pass_front.py` directly from the GUI.
+* **1-Click TR-069 Payload Queueing:** Pushes `Device.JioSTB.USB.USBDebugging=true`, `Device.JioSTB.USB.DebugValidityDate=2037`, and FOTA disable commands directly to GenieACS.
+
+### 2. In-App Background Auto-Updater
+* **Boot Release Check:** On application startup, asynchronously checks the GitHub API for new releases (`RookieEnough/Datsugoku-GUI`).
+* **Slide-Down Notification Banner:** When an update is detected, a Material 3 action bar slides down with the new version tag, release notes link, and an **"Update Now"** button.
+* **1-Click Self-Update Engine:** Downloads the latest executable, deploys an atomic swap script (`updater_swap.bat`), terminates the current process, replaces the binary, and relaunches automatically.
+
+### 3. Kernel Input Event Remapping
+* **Zero-Root Character Device Hook:** Deploys `remap_listener.sh` to `/data/local/tmp/`, monitoring `/dev/input/event5` via `getevent -l`.
+* **Debouncing & State Filtering:** Filters specifically for keydown transitions (`value 1`) and discards keyup bounces (`value 0`).
+* **Intent Dispatcher:** Dispatches applications using internal AOSP `monkey -p <target_package> -c android.intent.category.LAUNCHER 1` execution paths.
 
 | Key Identifier | Event Keycode | Default Hardware Target | Default Custom Target |
 | :--- | :---: | :--- | :--- |
@@ -98,32 +125,29 @@ Jio Set-Top Box units (such as the SDMC DV8219 / JHSC200 / JHSD200) ship with he
 | `VOOT_PKG` | `KEY_PROG3` (186) | Voot / JioCinema | `com.viacom18.tv.voot` |
 | `YOUTUBE_PKG` | `KEY_PROG4` (187) | Jio YouTube | `io.gh.reisxd.tizentube.cobalt` |
 
-### 2. Autonomous Subnet Hunter
-* **Asynchronous Socket Probe:** Uses non-blocking socket connections across local `/24` subnets (e.g., `192.168.1.0/24`, `192.168.29.0/24`) querying port 5555.
-* **Autonomous Handshake:** Immediately detects when the STB establishes network connectivity or boots up from a cold restart, initiating an automated `adb connect <ip>:5555` handshake.
-* **Visual Radar Telemetry:** Features a dynamic Material 3 animated radar sweep with real-time attempt counters and elapsed execution timers.
+### 4. Autonomous Subnet Hunter
+* **Asynchronous Socket Probe:** Uses non-blocking socket connections across local `/24` subnets querying port 5555.
+* **Instant Handshake:** Automatically catches the STB upon boot/reconnect, establishing the ADB connection without manual IP entry.
+* **Animated M3 Radar:** Visual radar sweep with real-time attempt counters and elapsed execution timers.
 
-### 3. One-Click Essential System Repairs
-Automates the sequential execution of essential system repairs:
-* **Unblock Bluetooth Pairing:** Direct invocation of `com.android.tv.settings.accessories.AddAccessoryActivity`, allowing the pairing of standard Bluetooth remotes, gamepads, keyboards, and headphones without OEM restrictions.
-* **Voice Search Activation:** Configures microphone permissions and maps generic Bluetooth voice remotes to standard AOSP voice input intents.
-* **System Clock Sync:** Synchronizes the device hardware clock against reliable NTP pool servers over ADB shell, resolving SSL/TLS certificate failures caused by clock skew.
-* **Daemon Persistence:** Installs and verifies the background remap execution loop, verifying running PID state.
+### 5. One-Click Essential System Repairs
+* **Unblock Bluetooth Pairing:** Invokes `com.android.tv.settings.accessories.AddAccessoryActivity` to pair third-party gamepads, headphones, and remotes.
+* **Voice Search Activation:** Configures microphone permissions and binds generic Bluetooth remotes to AOSP voice search intents.
+* **System Clock Sync:** Synchronizes the device hardware clock against reliable NTP pool servers over ADB shell.
+* **Daemon Persistence:** Verifies background remap execution loops and running PID states.
 
-### 4. Real-Time Memory Telemetry & LMK Optimization
-* **Live `/proc/meminfo` Parsing:** Queries memory utilization (`MemTotal`, `MemAvailable`, `MemFree`, `Cached`) directly from the Linux kernel.
-* **Curved Arc Gauge:** Visualizes real-time RAM saturation via a custom vector arc meter.
-* **Process Trimming:** Trims active background processes using `am kill-all` and clears temporary caches without requiring root privileges.
+### 6. Real-Time Memory Telemetry & LMK Optimization
+* **Live `/proc/meminfo` Parsing:** Directly queries memory metrics (`MemTotal`, `MemAvailable`, `MemFree`, `Cached`).
+* **Curved Arc Gauge:** Visualizes RAM saturation via a vector arc meter.
+* **Process Trimming:** Trims active background processes using `am kill-all` and clears temporary caches.
 
-### 5. Batch APK Sideloading Pipeline
-* **Multi-Package Queue:** Allows multi-file selection of Android application packages (`.apk`).
-* **Automated Installation Flags:** Installs packages sequentially using `pm install -r -d -g` (replacing existing builds and auto-granting all declared runtime permissions).
-* **Automated Permission Grants:** Automatically grants sensitive permissions post-install, including `android.permission.RECORD_AUDIO`, `android.permission.READ_EXTERNAL_STORAGE`, and `android.permission.WRITE_EXTERNAL_STORAGE`.
+### 7. Batch APK Sideloading Pipeline
+* **Multi-Package Queue:** Sequential silent installation using `pm install -r -d -g`.
+* **Automated Runtime Permissions:** Automatically grants `RECORD_AUDIO`, `READ/WRITE_EXTERNAL_STORAGE`, and unknown sources.
 
-### 6. Material 3 Desktop Architecture
-* **Design System:** Engineered from the ground up on the Google Material Design 3 (Material You) Expressive specification.
-* **Tonal Hierarchy:** Features dark obsidian tonal container surfaces (`#10131A`, `#1D2027`, `#272B33`) with electric cyan primary accents (`#A8C7FA`) and gold tertiary indicators (`#FFDDAE`).
-* **Smooth Motion & Spinners:** Custom animated `M3SwirlLoader` canvas components and `M3MorphLoader` continuous polygon interpolators.
+### 8. Material 3 Desktop Architecture
+* **Design System:** Built on Google Material Design 3 Expressive guidelines.
+* **Tonal Surfaces:** Dark obsidian palette (`#10131A`, `#1D2027`, `#272B33`) with electric cyan primary accents (`#A8C7FA`) and gold tertiary accents (`#FFDDAE`).
 * **Thread-Safe Architecture:** Worker threads decouple ADB I/O from the GUI event loop using asynchronous thread-safe message queues.
 
 ---
@@ -134,39 +158,45 @@ Automates the sequential execution of essential system repairs:
 flowchart TD
     subgraph Host["Host Machine (Windows 10 / 11)"]
         UI["Jio Datsugoku GUI\n(CustomTkinter M3)"]
-        Queue["Thread-Safe Queue\n(Queue.Queue)"]
-        Workers["Worker Pool\n(Hunter / ADB / Sideload)"]
+        Updater["Auto-Updater Engine\n(GitHub Releases API)"]
+        Exploit["Stage 1 ACS Engine\n(eMudhra Mint & Proxy)"]
+        Hunter["Subnet Radar Hunter\n(Port 5555 Sweep)"]
         ADB["ADB Manager Engine\n(subprocess.Popen)"]
-        UI <--> Queue
-        Queue <--> Workers
-        Workers <--> ADB
+        
+        UI --> Updater
+        UI --> Exploit
+        UI --> Hunter
+        UI --> ADB
     end
 
-    subgraph Network["Local Area Network (LAN / Wi-Fi)"]
-        TCP["TCP Socket / Port 5555\n(Subnet Radar)"]
-        ADB <--> TCP
+    subgraph ExploitInfra["Local Network Exploit Infrastructure"]
+        DNS["DNS Override\n(acs.oss.jio.com -> Host IP)"]
+        Proxy["pass_front.py (:8443)\n(TLS Reverse Proxy)"]
+        Genie["GenieACS + Mongo\n(CWMP :7547 / NBI :7557)"]
+        
+        DNS --> Proxy
+        Proxy --> Genie
     end
 
     subgraph Target["Target Device: Jio STB (JHSC200 / JHSD200)"]
-        Daemon["adbd\n(Android Debug Daemon)"]
-        TCP <--> Daemon
+        CWMP["STB Inform Client\n(Cold Boot Hook)"]
+        ADBD["adbd (:5555)\n(Android Debug Daemon)"]
+        
+        CWMP -->|HTTPS :8443| Proxy
+        Genie -.->|Push Tasks: ADB Enable| CWMP
+        CWMP ==>|Permanent Unlock| ADBD
+        Hunter -.->|Auto-Handshake| ADBD
         
         subgraph Userland["Userland Storage (/data/local/tmp)"]
-            Script["remap_listener.sh"]
+            Remap["remap_listener.sh"]
             Conf["remap_config.conf"]
-            Daemon --> Script
-            Script --> Conf
+            ADBD --> Remap
+            Remap --> Conf
         end
 
         subgraph Kernel["Linux Kernel 4.9.x"]
-            Input["/dev/input/event5\n(Bluetooth Remote Char Device)"]
-            Script -.->|getevent -l| Input
-        end
-
-        subgraph Framework["Android TV Framework"]
-            Monkey["AOSP monkey / am\n(Intent Dispatcher)"]
-            Script --> Monkey
-            Monkey --> Apps["Remapped Apps\n(SmartTube / Hotstar / Netflix)"]
+            Input["/dev/input/event5\n(Bluetooth Remote Char Node)"]
+            Remap -.->|getevent -l| Input
         end
     end
 ```
@@ -181,22 +211,16 @@ flowchart TD
 | **Jio STB JHSD200** | Amlogic S905X2 / Skyworth | 9.0 (Pie) | 4.9.113 | Tier 1 (Fully Tested) |
 | **Generic Android TV** | Amlogic / Rockchip / Allwinner | 9.0 – 12.0 | 4.x / 5.x | Tier 2 (Generic ADB features) |
 
-> [!NOTE]
-> Physical remote key remapping requires an input device mapping matching `/dev/input/event5` or standard Linux input subsystem event nodes.
-
 ---
 
 ## Installation & Setup
 
 ### Option A: Standalone Executable (Windows x64)
-The simplest way to use Datsugoku GUI without installing Python or dependencies:
 1. Download the latest `JioDatsugoku.exe` from the [Releases](https://github.com/RookieEnough/Datsugoku-GUI/releases) page.
-2. Ensure `adb.exe` is located in the same directory (or installed system-wide in `PATH`).
+2. Ensure `adb.exe` is in the same folder or in `PATH`.
 3. Launch `JioDatsugoku.exe` (or run `Launch-Jio-Datsugoku.bat`).
 
 ### Option B: Running from Source
-To run or develop directly from source code:
-
 ```bash
 # 1. Clone the repository
 git clone https://github.com/RookieEnough/Datsugoku-GUI.git
@@ -214,8 +238,6 @@ python jio_toolbox_gui.py
 ```
 
 ### Option C: Compiling with PyInstaller
-To generate your own standalone `.exe` with embedded assets and icon bitmaps:
-
 ```bash
 pyinstaller --noconfirm --clean --windowed --onefile \
     --name "JioDatsugoku" \
@@ -224,13 +246,9 @@ pyinstaller --noconfirm --clean --windowed --onefile \
     jio_toolbox_gui.py
 ```
 
-The compiled binary will be placed in the `dist/` directory.
-
 ---
 
 ## Configuration Reference (`remap_config.conf`)
-
-The remote remapper daemon dynamically reads its key bindings from `/data/local/tmp/remap_config.conf` on the target STB:
 
 ```ini
 # ===================================================================
@@ -251,23 +269,50 @@ VOOT_PKG=com.viacom18.tv.voot
 YOUTUBE_PKG=io.gh.reisxd.tizentube.cobalt
 ```
 
-To update mappings manually over ADB shell:
-```bash
-adb shell "echo 'YOUTUBE_PKG=com.google.android.youtube.tv' > /data/local/tmp/remap_config.conf"
-```
+---
+
+## Community & Donations
+
+If you find **Datsugoku GUI** helpful, consider supporting open-source hardware independence and software preservation:
+
+<div align="center">
+
+  <a href="https://buymeachai.ezee.li/RookieZ" target="_blank">
+    <img src="https://raw.githubusercontent.com/TakiShiwa/donate-with-upi/ffbb38749891aeb62e758a3692698e346e3df2da/Button/SVG/UPI-light-blue-01.svg" height="34" alt="Donate via UPI" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://ko-fi.com/rookie_z" target="_blank">
+    <img src="https://storage.ko-fi.com/cdn/kofi6.png?v=6" height="34" alt="Donate via Ko-fi" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://paypal.me/RookieEnough" target="_blank">
+    <img src="https://raw.githubusercontent.com/stefan-niedermann/paypal-donate-button/master/paypal-donate-button.png" height="34" alt="Donate via PayPal" />
+  </a>
+
+  <br /><br />
+
+  <a href="https://discord.com/invite/CrM6y4ujnq"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord" /></a>
+  &nbsp;
+  <a href="https://x.com/_Rookie_Z"><img src="https://img.shields.io/badge/Twitter%20%2F%20X-@__Rookie__Z-1D9BF0?style=flat-square&logo=x&logoColor=white" alt="Twitter" /></a>
+  &nbsp;
+  <a href="https://github.com/RookieEnough"><img src="https://img.shields.io/badge/GitHub-@RookieEnough-24292F?style=flat-square&logo=github&logoColor=white" alt="GitHub" /></a>
+  &nbsp;
+  <a href="https://orionstore.pages.dev"><img src="https://img.shields.io/badge/Orion%20Store-Visit%20Website-7478F8?style=flat-square" alt="Orion Store" /></a>
+
+</div>
 
 ---
 
 ## Troubleshooting & Diagnostics
 
 ### 1. "Device Unauthorized" in ADB
-* **Symptom:** Connection badge displays "Unauthorized" or log reports error code 1.
-* **Resolution:** Look at your television screen. A prompt titled **"Allow USB debugging?"** will appear. Check **"Always allow from this computer"** and select **OK** with your remote.
+* **Symptom:** Connection badge shows "Unauthorized" or returns exit code 1.
+* **Resolution:** Check your TV screen for the **"Allow USB debugging?"** prompt. Select **"Always allow from this computer"** and click **OK**.
 
 ### 2. Daemon Inactive After Device Reboot
-* **Symptom:** Remote buttons open default OEM apps again after a reboot.
+* **Symptom:** Remote buttons open default OEM apps again after a cold reboot.
 * **Explanation:** Android clears `/data/local/tmp` background processes during cold restarts.
-* **Resolution:** Connect Datsugoku GUI, navigate to the **Remap** tab, and click **Deploy Remap Daemon**.
+* **Resolution:** Open Datsugoku GUI, open the **Remote Remap** tab, and click **Deploy Remap Daemon**.
 
 ### 3. Port 5555 Connection Refused
 * **Symptom:** Network scan finds IP, but handshake times out.
@@ -293,8 +338,8 @@ adb shell "echo 'YOUTUBE_PKG=com.google.android.youtube.tv' > /data/local/tmp/re
 
 * **Lead Architect & Reverse Engineering:** [Sarthak Sinha (RookieEnough)](https://github.com/RookieEnough)
 * **CustomTkinter UI Framework:** [Tom Schimansky](https://github.com/TomSchimansky/CustomTkinter)
+* **Exploit Research & ACS PoC:** Bihaan Sen, ak_0o7, Otus9051, Vishal Beniwal.
 * **Underlying Platform Tools:** Android Open Source Project (AOSP) & Android Debug Bridge (ADB).
-* **Community Researchers:** Hardware enthusiasts and contributors across the Android TV reverse-engineering community who documented JHSC200 / JHSD200 hardware nodes and packet structures.
 
 ---
 

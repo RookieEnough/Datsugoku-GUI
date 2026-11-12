@@ -4,6 +4,10 @@ Professional, clean, native Windows application for Jio STB JHSC200 / JHSD200.
 """
 
 import os
+import webbrowser
+import shutil
+import urllib.request
+import json
 import sys
 import time
 import socket
@@ -30,6 +34,22 @@ from PIL import Image
 # -------------------------------------------------------------
 APP_TITLE = "Jio Datsugoku"
 APP_SUBTITLE = "JHSC200 / JHSD200"
+APP_VERSION = "1.0.0"
+GITHUB_REPO = "RookieEnough/Datsugoku-GUI"
+GITHUB_API_RELEASES = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+
+DONATION_LINKS = [
+    ("BuyMeAChai (UPI)", "https://buymeachai.ezee.li/RookieZ", "#00B4D8"),
+    ("Ko-fi", "https://ko-fi.com/rookie_z", "#FF5E5B"),
+    ("PayPal", "https://paypal.me/RookieEnough", "#0079C1")
+]
+
+SOCIAL_LINKS = [
+    ("Discord", "https://discord.com/invite/CrM6y4ujnq", "#5865F2"),
+    ("Twitter / X", "https://x.com/_Rookie_Z", "#1D9BF0"),
+    ("GitHub", "https://github.com/RookieEnough", "#24292F"),
+    ("Orion Store", "https://orionstore.pages.dev", "#7478F8")
+]
 DEFAULT_ADB_PORT = 5555
 
 def get_base_dir():
@@ -726,6 +746,9 @@ class JioToolboxApp(ctk.CTk):
         self.remote_config = {}
         self.is_hunting = False
         self.hunt_thread = None
+        self.tls_proc = None
+        self.is_proxy_running = False
+        self.host_lan_ip = self._detect_host_ip()
 
         # Build UI Hierarchy
         self._build_top_app_bar()
@@ -734,6 +757,7 @@ class JioToolboxApp(ctk.CTk):
         # Start Async Queue & Connect
         self.after(100, self._process_log_queue)
         self.after(400, self._initial_connect)
+        self.after(1200, self._check_for_updates)
 
     def _load_all_icons(self):
         # App Logo
@@ -746,6 +770,7 @@ class JioToolboxApp(ctk.CTk):
         self.img_voot = load_ctk_image("voot.png", (42, 42))
 
         # Material 3 Nav Glyphs
+        self.img_nav_unlock = load_ctk_image("nav_unlock.png", (20, 20))
         self.img_nav_hunter = load_ctk_image("nav_hunter.png", (20, 20))
         self.img_nav_fixes = load_ctk_image("nav_fixes.png", (20, 20))
         self.img_nav_boost = load_ctk_image("nav_boost.png", (20, 20))
@@ -786,6 +811,21 @@ class JioToolboxApp(ctk.CTk):
 
         lbl_sub = ctk.CTkLabel(title_box, text="STB Jailbreak Suite • JHSC200 / JHSD200", font=ctk.CTkFont(size=11), text_color=self.M3_ON_SURFACE_MUTED)
         lbl_sub.pack(anchor="w")
+
+        # Support & Socials Pill
+        btn_support = ctk.CTkButton(
+            brand_frame,
+            text="♥ Support",
+            height=28,
+            width=75,
+            fg_color=self.M3_SURFACE_CONTAINER_HIGH,
+            hover_color=self.M3_SURFACE_CONTAINER_HIGHEST,
+            text_color=self.M3_TERTIARY,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            corner_radius=14,
+            command=self._open_support_dialog
+        )
+        btn_support.pack(side="left", padx=(14, 0))
 
         # Right Controls: Status Pill + IP Field + Primary Connect Pill
         conn_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
@@ -856,6 +896,9 @@ class JioToolboxApp(ctk.CTk):
         )
         self.btn_reboot.pack(side="left")
 
+        # In-App Auto-Update Banner (hidden until update detected)
+        self.update_banner = ctk.CTkFrame(self, fg_color=self.M3_PRIMARY_CONTAINER, height=42, corner_radius=0)
+
     def set_global_busy(self, busy: bool):
         if busy:
             try:
@@ -890,9 +933,10 @@ class JioToolboxApp(ctk.CTk):
         self.nav_buttons = {}
 
         nav_items = [
+            ("unlock", "Unlock STB", self.img_nav_unlock, self._build_unlock_tab),
+            ("hunter", "STB Hunter", self.img_nav_hunter, self._build_hunter_tab),
             ("fixes", "1-Click Fixes", self.img_nav_fixes, self._build_fixes_tab),
             ("remap", "Remote Remap", self.img_nav_remap, self._build_remap_tab),
-            ("hunter", "STB Hunter", self.img_nav_hunter, self._build_hunter_tab),
             ("boost", "Speed & Boost", self.img_nav_boost, self._build_boost_tab),
             ("apks", "APK Sideload", self.img_nav_apks, self._build_apks_tab),
             ("terminal", "Live Terminal", self.img_nav_terminal, self._build_terminal_tab)
@@ -936,7 +980,7 @@ class JioToolboxApp(ctk.CTk):
         self.lbl_device_info.pack(padx=14, pady=12, anchor="w")
 
         # Default Active Tab
-        self.select_tab("fixes")
+        self.select_tab("unlock")
 
     def select_tab(self, tab_id):
         for tid, frame in self.tabs.items():
@@ -2488,6 +2532,679 @@ class JioToolboxApp(ctk.CTk):
 # -------------------------------------------------------------
 # Application Entry Point
 # -------------------------------------------------------------
+
+    # ---------------------------------------------------------
+    # Unlock STB Tab (Day 0 Jailbreak & ACS Exploit)
+    # ---------------------------------------------------------
+    def _build_unlock_tab(self, parent):
+        scroll = ctk.CTkScrollableFrame(parent, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=4, pady=4)
+
+        # Header Title
+        title_box = ctk.CTkFrame(scroll, fg_color="transparent")
+        title_box.pack(fill="x", pady=(0, 10))
+
+        ctk.CTkLabel(
+            title_box,
+            text="Day 0 STB Unlock (Stage 1 ACS Exploit)",
+            font=ctk.CTkFont(size=20, weight="bold"),
+            text_color=self.M3_ON_SURFACE
+        ).pack(anchor="w")
+
+        ctk.CTkLabel(
+            title_box,
+            text="Complete guided pipeline: Host LAN setup, eMudhra TLS cert minting, and TR-069 payload delivery to permanently enable ADB on port 5555",
+            font=ctk.CTkFont(size=12),
+            text_color=self.M3_ON_SURFACE_MUTED
+        ).pack(anchor="w", pady=(3, 0))
+
+        # Task Banner
+        self.unlock_task_banner = M3TaskBanner(scroll)
+
+        # ── Card 1: Host PC Network & DNS Guidance ───────────────
+        ip_card = ctk.CTkFrame(scroll, fg_color=self.M3_SURFACE_CONTAINER, border_color=self.M3_OUTLINE_VARIANT, border_width=1, corner_radius=20)
+        ip_card.pack(fill="x", pady=6, padx=4)
+
+        ip_in = ctk.CTkFrame(ip_card, fg_color="transparent")
+        ip_in.pack(fill="x", padx=20, pady=16)
+
+        ip_top_row = ctk.CTkFrame(ip_in, fg_color="transparent")
+        ip_top_row.pack(fill="x")
+
+        ip_left = ctk.CTkFrame(ip_top_row, fg_color="transparent")
+        ip_left.pack(side="left")
+
+        ctk.CTkLabel(
+            ip_left,
+            text="YOUR HOST PC LAN IP ADDRESS",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            text_color=self.M3_PRIMARY
+        ).pack(anchor="w")
+
+        self.lbl_host_ip = ctk.CTkLabel(
+            ip_left,
+            text=self.host_lan_ip,
+            font=ctk.CTkFont(family="Consolas", size=26, weight="bold"),
+            text_color=self.M3_ON_SURFACE
+        )
+        self.lbl_host_ip.pack(anchor="w", pady=(2, 0))
+
+        ip_right = ctk.CTkFrame(ip_top_row, fg_color="transparent")
+        ip_right.pack(side="right")
+
+        self.btn_copy_ip = ctk.CTkButton(
+            ip_right,
+            text="Copy IP",
+            width=90,
+            height=34,
+            fg_color=self.M3_PRIMARY_CONTAINER,
+            text_color=self.M3_ON_PRIMARY_CONTAINER,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            corner_radius=17,
+            command=self._copy_host_ip
+        )
+        self.btn_copy_ip.pack(side="right", padx=(8, 0))
+
+        btn_refresh_ip = ctk.CTkButton(
+            ip_right,
+            text="Refresh",
+            width=80,
+            height=34,
+            fg_color=self.M3_SURFACE_CONTAINER_HIGH,
+            text_color=self.M3_ON_SURFACE,
+            font=ctk.CTkFont(size=12),
+            corner_radius=17,
+            command=self._refresh_host_ip
+        )
+        btn_refresh_ip.pack(side="right")
+
+        self.lbl_copy_toast = ctk.CTkLabel(
+            ip_in,
+            text="",
+            font=ctk.CTkFont(size=11),
+            text_color=self.M3_SUCCESS
+        )
+        self.lbl_copy_toast.pack(anchor="w", pady=(2, 0))
+
+        # DNS Instruction Box
+        dns_box = ctk.CTkFrame(ip_in, fg_color=self.M3_SURFACE_CONTAINER_HIGH, corner_radius=12)
+        dns_box.pack(fill="x", pady=(10, 0))
+
+        dns_box_in = ctk.CTkFrame(dns_box, fg_color="transparent")
+        dns_box_in.pack(fill="x", padx=14, pady=10)
+
+        ctk.CTkLabel(
+            dns_box_in,
+            text="DNS Redirection Requirement:",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=self.M3_TERTIARY
+        ).pack(anchor="w")
+
+        ctk.CTkLabel(
+            dns_box_in,
+            text=f"The Jio STB phones home to https://acs.oss.jio.com:8443 on boot. You must redirect this hostname:\n"
+                 f"• Target Hostname: acs.oss.jio.com  ➔  Redirect IP: {self.host_lan_ip}\n"
+                 f"• Setup: Configure via Wi-Fi Router DNS, Mobile Hotspot DNS Changer app, Technitium DNS, or dnsmasq.",
+            font=ctk.CTkFont(size=11),
+            text_color=self.M3_ON_SURFACE_VARIANT,
+            justify="left"
+        ).pack(anchor="w", pady=(4, 0))
+
+        # ── Card 2: Exploit Health & Service Monitor ─────────────
+        health_card = ctk.CTkFrame(scroll, fg_color=self.M3_SURFACE_CONTAINER, border_color=self.M3_OUTLINE_VARIANT, border_width=1, corner_radius=20)
+        health_card.pack(fill="x", pady=6, padx=4)
+
+        health_in = ctk.CTkFrame(health_card, fg_color="transparent")
+        health_in.pack(fill="x", padx=20, pady=16)
+
+        health_header = ctk.CTkFrame(health_in, fg_color="transparent")
+        health_header.pack(fill="x", pady=(0, 10))
+
+        ctk.CTkLabel(health_header, text="EXPLOIT SERVICES HEALTH MONITOR", font=ctk.CTkFont(size=11, weight="bold"), text_color=self.M3_PRIMARY).pack(side="left")
+
+        ctk.CTkButton(
+            health_header,
+            text="Check Ports",
+            width=95,
+            height=28,
+            fg_color=self.M3_SURFACE_CONTAINER_HIGH,
+            text_color=self.M3_ON_SURFACE,
+            font=ctk.CTkFont(size=11),
+            corner_radius=14,
+            command=self._refresh_unlock_health
+        ).pack(side="right")
+
+        badges_row = ctk.CTkFrame(health_in, fg_color="transparent")
+        badges_row.pack(fill="x")
+
+        self.badge_port_8443 = ctk.CTkLabel(badges_row, text="● Port 8443 (TLS Proxy)", font=ctk.CTkFont(size=11, weight="bold"), text_color=self.M3_ERROR, fg_color=self.M3_ERROR_CONTAINER, corner_radius=10, padx=10, pady=4)
+        self.badge_port_8443.pack(side="left", padx=(0, 8))
+
+        self.badge_port_7547 = ctk.CTkLabel(badges_row, text="● Port 7547 (CWMP)", font=ctk.CTkFont(size=11, weight="bold"), text_color=self.M3_ERROR, fg_color=self.M3_ERROR_CONTAINER, corner_radius=10, padx=10, pady=4)
+        self.badge_port_7547.pack(side="left", padx=(0, 8))
+
+        self.badge_port_7557 = ctk.CTkLabel(badges_row, text="● Port 7557 (NBI API)", font=ctk.CTkFont(size=11, weight="bold"), text_color=self.M3_ERROR, fg_color=self.M3_ERROR_CONTAINER, corner_radius=10, padx=10, pady=4)
+        self.badge_port_7557.pack(side="left", padx=(0, 8))
+
+        self.badge_cert_status = ctk.CTkLabel(badges_row, text="● eMudhra Cert", font=ctk.CTkFont(size=11, weight="bold"), text_color=self.M3_ERROR, fg_color=self.M3_ERROR_CONTAINER, corner_radius=10, padx=10, pady=4)
+        self.badge_cert_status.pack(side="left", padx=(0, 8))
+
+        self.badge_port_5555 = ctk.CTkLabel(badges_row, text="● Port 5555 (ADB)", font=ctk.CTkFont(size=11, weight="bold"), text_color=self.M3_ERROR, fg_color=self.M3_ERROR_CONTAINER, corner_radius=10, padx=10, pady=4)
+        self.badge_port_5555.pack(side="left")
+
+        # ── Card 3: 1-Click Exploit Automation Actions ────────────
+        actions_card = ctk.CTkFrame(scroll, fg_color=self.M3_SURFACE_CONTAINER, border_color=self.M3_OUTLINE_VARIANT, border_width=1, corner_radius=20)
+        actions_card.pack(fill="x", pady=6, padx=4)
+
+        actions_in = ctk.CTkFrame(actions_card, fg_color="transparent")
+        actions_in.pack(fill="x", padx=20, pady=16)
+
+        ctk.CTkLabel(actions_in, text="1-CLICK EXPLOIT ACTIONS", font=ctk.CTkFont(size=11, weight="bold"), text_color=self.M3_PRIMARY).pack(anchor="w", pady=(0, 8))
+
+        action_grid = [
+            ("Mint Forged eMudhra Chain", "Recovers compromised P-384 scalar (d=156) & signs valid TLS leaf for acs.oss.jio.com", "Mint Cert", self._on_click_mint_cert),
+            ("Launch GenieACS Stack (Docker)", "Starts MongoDB & GenieACS CWMP server via docker-compose (ports 7547, 7557)", "Start Docker", self._on_click_start_docker),
+            ("Start / Stop TLS Proxy (:8443)", "Spawns pass_front.py reverse proxy to handle TLS termination with the forged chain", "Start Proxy", self._on_click_toggle_proxy),
+            ("Queue TR-069 Unlock Tasks", "Sends USBDebugging=true, DebugValidityDate=2037, and FOTA disable tasks to GenieACS", "Queue Tasks", self._on_click_queue_tasks)
+        ]
+
+        for title, desc, btn_txt, cmd in action_grid:
+            row = ctk.CTkFrame(actions_in, fg_color=self.M3_SURFACE_CONTAINER_HIGH, corner_radius=14)
+            row.pack(fill="x", pady=4)
+
+            row_in = ctk.CTkFrame(row, fg_color="transparent")
+            row_in.pack(fill="x", padx=16, pady=10)
+
+            tbox = ctk.CTkFrame(row_in, fg_color="transparent")
+            tbox.pack(side="left", fill="x", expand=True)
+
+            ctk.CTkLabel(tbox, text=title, font=ctk.CTkFont(size=13, weight="bold"), text_color=self.M3_ON_SURFACE).pack(anchor="w")
+            ctk.CTkLabel(tbox, text=desc, font=ctk.CTkFont(size=11), text_color=self.M3_ON_SURFACE_MUTED).pack(anchor="w")
+
+            btn = ctk.CTkButton(
+                row_in,
+                text=btn_txt,
+                width=115,
+                height=34,
+                fg_color=self.M3_PRIMARY_CONTAINER,
+                hover_color="#005A91",
+                text_color=self.M3_ON_PRIMARY_CONTAINER,
+                font=ctk.CTkFont(size=12, weight="bold"),
+                corner_radius=17,
+                command=cmd
+            )
+            btn.pack(side="right", padx=(12, 0))
+            if "Proxy" in title:
+                self.btn_proxy_toggle = btn
+
+        # ── Card 4: Hardware Guidance & Auto-Catch ────────────────
+        guide_card = ctk.CTkFrame(scroll, fg_color=self.M3_SURFACE_CONTAINER, border_color=self.M3_OUTLINE_VARIANT, border_width=1, corner_radius=20)
+        guide_card.pack(fill="x", pady=6, padx=4)
+
+        guide_in = ctk.CTkFrame(guide_card, fg_color="transparent")
+        guide_in.pack(fill="x", padx=20, pady=16)
+
+        ctk.CTkLabel(guide_in, text="STB HARDWARE EXECUTION GUIDANCE", font=ctk.CTkFont(size=11, weight="bold"), text_color=self.M3_PRIMARY).pack(anchor="w", pady=(0, 6))
+
+        steps = [
+            ("Step 1", "Point DNS: Configure your router / hotspot so acs.oss.jio.com resolves to your host IP."),
+            ("Step 2", "Verify Services: Ensure the Forged Cert is generated and TLS Proxy is running on :8443."),
+            ("Step 3", "Cold Power-Cycle: Unplug the wall power adapter from the Jio STB, wait 5 seconds, and plug back in."),
+            ("Step 4", "Payload Handshake: The STB phones home to :8443, accepts the forged chain, and permanently toggles ADB on :5555.")
+        ]
+
+        for s_num, s_desc in steps:
+            s_row = ctk.CTkFrame(guide_in, fg_color="transparent")
+            s_row.pack(fill="x", pady=3)
+
+            ctk.CTkLabel(s_row, text=s_num, font=ctk.CTkFont(size=11, weight="bold"), text_color=self.M3_TERTIARY, fg_color=self.M3_SURFACE_CONTAINER_HIGH, corner_radius=8, padx=8, pady=2).pack(side="left")
+            ctk.CTkLabel(s_row, text=f"  {s_desc}", font=ctk.CTkFont(size=12), text_color=self.M3_ON_SURFACE).pack(side="left", fill="x")
+
+        # CTA: Switch to Hunter
+        cta_frame = ctk.CTkFrame(guide_in, fg_color="transparent")
+        cta_frame.pack(fill="x", pady=(14, 0))
+
+        ctk.CTkButton(
+            cta_frame,
+            text="Launch STB Hunter Radar ➔",
+            height=40,
+            fg_color=self.M3_TERTIARY,
+            hover_color="#E0A96D",
+            text_color="#1D2027",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            corner_radius=20,
+            command=lambda: self.select_tab("hunter")
+        ).pack(fill="x")
+
+        # ── Card 5: Developer Support & Socials ───────────────────
+        support_card = ctk.CTkFrame(scroll, fg_color=self.M3_SURFACE_CONTAINER, border_color=self.M3_OUTLINE_VARIANT, border_width=1, corner_radius=20)
+        support_card.pack(fill="x", pady=6, padx=4)
+
+        support_in = ctk.CTkFrame(support_card, fg_color="transparent")
+        support_in.pack(fill="x", padx=20, pady=16)
+
+        ctk.CTkLabel(support_in, text="DEVELOPER SUPPORT & SOCIALS", font=ctk.CTkFont(size=11, weight="bold"), text_color=self.M3_PRIMARY).pack(anchor="w")
+        ctk.CTkLabel(support_in, text="Created by Sarthak Sinha (RookieEnough) • Support open-source hardware independence & development", font=ctk.CTkFont(size=11), text_color=self.M3_ON_SURFACE_MUTED).pack(anchor="w", pady=(2, 10))
+
+        links_frame = ctk.CTkFrame(support_in, fg_color="transparent")
+        links_frame.pack(fill="x")
+
+        for name, url, color in DONATION_LINKS:
+            ctk.CTkButton(
+                links_frame,
+                text=name,
+                height=32,
+                fg_color=color,
+                hover_color=color,
+                text_color="#FFFFFF",
+                font=ctk.CTkFont(size=11, weight="bold"),
+                corner_radius=16,
+                command=lambda u=url: webbrowser.open(u)
+            ).pack(side="left", padx=(0, 8))
+
+        for name, url, color in SOCIAL_LINKS:
+            ctk.CTkButton(
+                links_frame,
+                text=name,
+                height=32,
+                fg_color=self.M3_SURFACE_CONTAINER_HIGH,
+                text_color=self.M3_ON_SURFACE,
+                font=ctk.CTkFont(size=11),
+                corner_radius=16,
+                command=lambda u=url: webbrowser.open(u)
+            ).pack(side="left", padx=(0, 6))
+
+        # Initial check
+        self.after(500, self._refresh_unlock_health)
+
+    # ---------------------------------------------------------
+    # Stage 1 Exploit Actions & Network Handlers
+    # ---------------------------------------------------------
+    def _detect_host_ip(self):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except Exception:
+            return "127.0.0.1"
+
+    def _copy_host_ip(self):
+        self.clipboard_clear()
+        self.clipboard_append(self.host_lan_ip)
+        self.lbl_copy_toast.configure(text=f"Copied {self.host_lan_ip} to clipboard!", text_color=self.M3_SUCCESS)
+        self.after(2500, lambda: self.lbl_copy_toast.configure(text=""))
+
+    def _refresh_host_ip(self):
+        self.host_lan_ip = self._detect_host_ip()
+        self.lbl_host_ip.configure(text=self.host_lan_ip)
+        self.lbl_copy_toast.configure(text=f"Refreshed: {self.host_lan_ip}", text_color=self.M3_PRIMARY)
+        self.after(2000, lambda: self.lbl_copy_toast.configure(text=""))
+
+    def _check_local_port(self, port, timeout=0.3):
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=timeout):
+                return True
+        except Exception:
+            return False
+
+    def _refresh_unlock_health(self):
+        threading.Thread(target=self._health_check_worker, daemon=True).start()
+
+    def _health_check_worker(self):
+        p8443 = self._check_local_port(8443)
+        p7547 = self._check_local_port(7547)
+        p7557 = self._check_local_port(7557)
+        p5555 = self._check_local_port(5555)
+        cert_exists = os.path.exists(os.path.join(BASE_DIR, "tls", "forged_chain.pem")) or os.path.exists("tls/forged_chain.pem")
+
+        def update():
+            if p8443:
+                self.badge_port_8443.configure(text="● Port 8443 (Active)", text_color=self.M3_SUCCESS, fg_color=self.M3_SUCCESS_CONTAINER)
+            else:
+                self.badge_port_8443.configure(text="● Port 8443 (Stopped)", text_color=self.M3_ERROR, fg_color=self.M3_ERROR_CONTAINER)
+
+            if p7547:
+                self.badge_port_7547.configure(text="● Port 7547 (CWMP Up)", text_color=self.M3_SUCCESS, fg_color=self.M3_SUCCESS_CONTAINER)
+            else:
+                self.badge_port_7547.configure(text="● Port 7547 (Stopped)", text_color=self.M3_ERROR, fg_color=self.M3_ERROR_CONTAINER)
+
+            if p7557:
+                self.badge_port_7557.configure(text="● Port 7557 (NBI Ready)", text_color=self.M3_SUCCESS, fg_color=self.M3_SUCCESS_CONTAINER)
+            else:
+                self.badge_port_7557.configure(text="● Port 7557 (Offline)", text_color=self.M3_ERROR, fg_color=self.M3_ERROR_CONTAINER)
+
+            if cert_exists:
+                self.badge_cert_status.configure(text="● eMudhra Cert (Ready)", text_color=self.M3_SUCCESS, fg_color=self.M3_SUCCESS_CONTAINER)
+            else:
+                self.badge_cert_status.configure(text="● eMudhra Cert (Missing)", text_color=self.M3_ERROR, fg_color=self.M3_ERROR_CONTAINER)
+
+            if p5555:
+                self.badge_port_5555.configure(text="● Port 5555 (ADB Open!)", text_color=self.M3_SUCCESS, fg_color=self.M3_SUCCESS_CONTAINER)
+            else:
+                self.badge_port_5555.configure(text="● Port 5555 (Waiting)", text_color=self.M3_ON_SURFACE_MUTED, fg_color=self.M3_SURFACE_CONTAINER_HIGH)
+
+        self._safe_after(0, update)
+
+    def _on_click_mint_cert(self):
+        self.unlock_task_banner.show_task("Minting Forged eMudhra Certificate", "Connecting to intermediate server & recovering scalar d=156...")
+        threading.Thread(target=self._mint_cert_worker, daemon=True).start()
+
+    def _mint_cert_worker(self):
+        try:
+            self.adb.log("Starting eMudhra certificate minting...", "INFO")
+            cert_script = os.path.join(BASE_DIR, "jhs", "forge_emudhra_chain.py")
+            out_chain = os.path.join(BASE_DIR, "tls", "forged_chain.pem")
+            os.makedirs(os.path.dirname(out_chain), exist_ok=True)
+
+            cmd = [sys.executable, cert_script, "--out", out_chain]
+            p = subprocess.run(cmd, capture_output=True, text=True, cwd=BASE_DIR)
+
+            if p.returncode == 0 and os.path.exists(out_chain):
+                self.adb.log(f"Successfully minted forged certificate chain -> {out_chain}", "SUCCESS")
+                self._safe_after(0, lambda: self.unlock_task_banner.set_success("eMudhra Certificate Ready", f"Generated {out_chain} (valid through 2028)"))
+                self._safe_after(0, self._refresh_unlock_health)
+            else:
+                err_msg = p.stderr.strip() or p.stdout.strip()
+                self.adb.log(f"Certificate minting failed: {err_msg}", "ERROR")
+                self._safe_after(0, lambda: self.unlock_task_banner.set_error("Certificate Minting Failed", err_msg[:120]))
+        except Exception as e:
+            self.adb.log(f"Certificate generation error: {e}", "ERROR")
+            self._safe_after(0, lambda: self.unlock_task_banner.set_error("Certificate Error", str(e)))
+
+    def _on_click_start_docker(self):
+        self.unlock_task_banner.show_task("Starting GenieACS Stack", "Invoking docker compose -f tls/docker-compose.yml up -d...")
+        threading.Thread(target=self._start_docker_worker, daemon=True).start()
+
+    def _start_docker_worker(self):
+        try:
+            compose_file = os.path.join(BASE_DIR, "tls", "docker-compose.yml")
+            self.adb.log(f"Starting Docker Compose with {compose_file}...", "INFO")
+            cmd = ["docker", "compose", "-f", compose_file, "up", "-d"]
+            p = subprocess.run(cmd, capture_output=True, text=True, cwd=BASE_DIR)
+
+            if p.returncode == 0:
+                self.adb.log("GenieACS & MongoDB containers started successfully", "SUCCESS")
+                self._safe_after(0, lambda: self.unlock_task_banner.set_success("GenieACS Services Active", "Ports 7547 (CWMP) and 7557 (NBI) are ready"))
+                self.after(2000, self._refresh_unlock_health)
+            else:
+                err = p.stderr.strip() or p.stdout.strip()
+                self.adb.log(f"Docker Compose error: {err}", "ERROR")
+                self._safe_after(0, lambda: self.unlock_task_banner.set_error("Docker Start Failed", err[:120]))
+        except Exception as e:
+            self.adb.log(f"Docker execution failed: {e}", "ERROR")
+            self._safe_after(0, lambda: self.unlock_task_banner.set_error("Docker Error", str(e)))
+
+    def _on_click_toggle_proxy(self):
+        if self.is_proxy_running and self.tls_proc and self.tls_proc.poll() is None:
+            try:
+                self.tls_proc.terminate()
+            except Exception:
+                pass
+            self.tls_proc = None
+            self.is_proxy_running = False
+            self.btn_proxy_toggle.configure(text="Start Proxy", fg_color=self.M3_PRIMARY_CONTAINER)
+            self.adb.log("TLS Proxy stopped", "INFO")
+            self._refresh_unlock_health()
+        else:
+            threading.Thread(target=self._start_proxy_worker, daemon=True).start()
+
+    def _start_proxy_worker(self):
+        cert_path = os.path.join(BASE_DIR, "tls", "forged_chain.pem")
+        if not os.path.exists(cert_path):
+            self.adb.log("Mint the forged certificate first before starting the proxy!", "WARN")
+            self._safe_after(0, lambda: self.unlock_task_banner.set_error("Certificate Missing", "Please click 'Mint Cert' first to generate tls/forged_chain.pem"))
+            return
+
+        proxy_script = os.path.join(BASE_DIR, "tls", "pass_front.py")
+        cmd = [sys.executable, proxy_script, "--cert", cert_path, "--ports", "8443"]
+        self.adb.log("Starting pass_front.py TLS proxy on port 8443...", "INFO")
+        self._safe_after(0, lambda: self.unlock_task_banner.show_task("Starting TLS Proxy", "Binding :8443 with forged certificate chain..."))
+
+        try:
+            self.tls_proc = subprocess.Popen(cmd, cwd=BASE_DIR)
+            time.sleep(1.2)
+            if self.tls_proc.poll() is None:
+                self.is_proxy_running = True
+                self._safe_after(0, lambda: self.btn_proxy_toggle.configure(text="Stop Proxy", fg_color=self.M3_ERROR))
+                self.adb.log("TLS Proxy running on https://0.0.0.0:8443", "SUCCESS")
+                self._safe_after(0, lambda: self.unlock_task_banner.set_success("TLS Proxy Active", "Listening on :8443. Ready for STB Inform."))
+                self._safe_after(0, self._refresh_unlock_health)
+            else:
+                self.adb.log("TLS Proxy process exited unexpectedly", "ERROR")
+                self._safe_after(0, lambda: self.unlock_task_banner.set_error("Proxy Error", "pass_front.py failed to bind port 8443"))
+        except Exception as e:
+            self.adb.log(f"Failed to spawn TLS proxy: {e}", "ERROR")
+
+    def _on_click_queue_tasks(self):
+        self.unlock_task_banner.show_task("Queuing TR-069 Unlock Tasks", "Connecting to GenieACS NBI API (http://127.0.0.1:7557)...")
+        threading.Thread(target=self._queue_tasks_worker, daemon=True).start()
+
+    def _queue_tasks_worker(self):
+        nbi_url = "http://127.0.0.1:7557"
+        try:
+            # Query devices
+            req = urllib.request.Request(f"{nbi_url}/devices/?projection=_id,_lastInform", headers={"User-Agent": "JioDatsugoku"})
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                devices = json.loads(resp.read().decode())
+
+            if not devices:
+                self.adb.log("GenieACS is online, but no STB device has Informed yet.", "WARN")
+                self._safe_after(0, lambda: self.unlock_task_banner.set_error(
+                    "No STB Found in GenieACS",
+                    "Cold-boot your Jio STB with DNS pointed to your PC. Once it Informs, tasks can be queued."
+                ))
+                return
+
+            dev_id = devices[0].get("_id")
+            dev_enc = urllib.parse.quote(dev_id, safe="")
+            self.adb.log(f"Queuing unlock tasks for device: {dev_id}...", "INFO")
+
+            tasks = [
+                ("Device.JioSTB.USB.USBDebugging", {"name": "setParameterValues", "parameterValues": [["Device.JioSTB.USB.USBDebugging", True, "xsd:boolean"]]}),
+                ("Device.JioSTB.USB.DebugValidityDate", {"name": "setParameterValues", "parameterValues": [["Device.JioSTB.USB.DebugValidityDate", "2037-01-01T00:00:00.000Z", "xsd:dateTime"]]}),
+                ("Device.JioSTB.FOTA.Disable", {"name": "setParameterValues", "parameterValues": [
+                    ["Device.JioSTB.FOTA.Disable", "true", "xsd:string"],
+                    ["Device.JioSTB.FOTA.DowngradeEnable", "true", "xsd:string"],
+                    ["Device.JioSTB.FOTA.DowngradeValidityDate", "2037-12-31T23:59:59.000Z", "xsd:dateTime"]
+                ]})
+            ]
+
+            for name, payload in tasks:
+                t_req = urllib.request.Request(
+                    f"{nbi_url}/devices/{dev_enc}/tasks",
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(t_req, timeout=3) as t_resp:
+                    pass
+
+            self.adb.log("Successfully queued TR-069 unlock tasks. STB will apply them on next Inform!", "SUCCESS")
+            self._safe_after(0, lambda: self.unlock_task_banner.set_success(
+                "Tasks Queued Successfully",
+                f"Queued ADB enable & FOTA block for {dev_id}. Cold boot STB to apply."
+            ))
+        except Exception as e:
+            self.adb.log(f"Failed to queue tasks to GenieACS: {e}", "ERROR")
+            self._safe_after(0, lambda: self.unlock_task_banner.set_error("GenieACS API Offline", "Ensure Docker / GenieACS is running on port 7557."))
+
+    # ---------------------------------------------------------
+    # In-App Auto-Updater on Boot
+    # ---------------------------------------------------------
+    def _check_for_updates(self):
+        threading.Thread(target=self._update_checker_worker, daemon=True).start()
+
+    def _update_checker_worker(self):
+        try:
+            req = urllib.request.Request(
+                GITHUB_API_RELEASES,
+                headers={"User-Agent": f"JioDatsugoku/{APP_VERSION}"}
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode())
+                latest_tag = data.get("tag_name", "").lstrip("v")
+                cur_tag = APP_VERSION.lstrip("v")
+
+                from packaging import version
+                if version.parse(latest_tag) > version.parse(cur_tag):
+                    assets = data.get("assets", [])
+                    download_url = None
+                    for a in assets:
+                        if a.get("name", "").endswith(".exe"):
+                            download_url = a.get("browser_download_url")
+                            break
+                    if not download_url and assets:
+                        download_url = assets[0].get("browser_download_url")
+
+                    self._safe_after(0, lambda: self._show_update_available(latest_tag, download_url, data.get("html_url")))
+                else:
+                    self.adb.log(f"Jio Datsugoku is up to date (v{APP_VERSION})", "INFO")
+        except Exception as e:
+            self.adb.log(f"Update check skipped ({e})", "DEBUG")
+
+    def _show_update_available(self, new_ver, dl_url, rel_url):
+        self.update_banner.pack(side="top", fill="x", before=self.sidebar.master)
+
+        for w in self.update_banner.winfo_children():
+            w.destroy()
+
+        banner_in = ctk.CTkFrame(self.update_banner, fg_color="transparent")
+        banner_in.pack(fill="x", padx=20, pady=6)
+
+        ctk.CTkLabel(
+            banner_in,
+            text=f"✨ Update Available: v{new_ver} (Current: v{APP_VERSION})",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=self.M3_ON_PRIMARY_CONTAINER
+        ).pack(side="left")
+
+        btn_update = ctk.CTkButton(
+            banner_in,
+            text="Update Now (Auto-Install)",
+            height=28,
+            fg_color=self.M3_PRIMARY,
+            text_color=self.M3_SURFACE,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            corner_radius=14,
+            command=lambda: self._perform_auto_update(dl_url)
+        )
+        btn_update.pack(side="left", padx=12)
+
+        btn_notes = ctk.CTkButton(
+            banner_in,
+            text="Release Notes",
+            height=28,
+            fg_color=self.M3_SURFACE_CONTAINER_HIGH,
+            text_color=self.M3_ON_SURFACE,
+            font=ctk.CTkFont(size=11),
+            corner_radius=14,
+            command=lambda: webbrowser.open(rel_url)
+        )
+        btn_notes.pack(side="left", padx=4)
+
+        btn_dismiss = ctk.CTkButton(
+            banner_in,
+            text="✕",
+            width=28,
+            height=28,
+            fg_color="transparent",
+            text_color=self.M3_ON_PRIMARY_CONTAINER,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            corner_radius=14,
+            command=self.update_banner.pack_forget
+        )
+        btn_dismiss.pack(side="right")
+
+    def _perform_auto_update(self, dl_url):
+        if not dl_url:
+            self.adb.log("No downloadable binary found for update", "WARN")
+            return
+        self.adb.log(f"Downloading update from {dl_url}...", "INFO")
+        threading.Thread(target=self._auto_update_worker, args=(dl_url,), daemon=True).start()
+
+    def _auto_update_worker(self, dl_url):
+        try:
+            target_name = "JioDatsugoku_update.exe"
+            req = urllib.request.Request(dl_url, headers={"User-Agent": f"JioDatsugoku/{APP_VERSION}"})
+            with urllib.request.urlopen(req) as resp, open(target_name, "wb") as f:
+                shutil.copyfileobj(resp, f)
+
+            self.adb.log("Update package downloaded. Swapping executable and restarting...", "SUCCESS")
+            current_exe = sys.argv[0]
+            if not current_exe.endswith(".exe"):
+                current_exe = "JioDatsugoku.exe"
+
+            updater_bat = "updater_swap.bat"
+            with open(updater_bat, "w") as f:
+                f.write(f"""@echo off
+timeout /t 1 /nobreak >nul
+move /y "{target_name}" "{os.path.basename(current_exe)}"
+start "" "{os.path.basename(current_exe)}"
+del "%~f0"
+""")
+            subprocess.Popen(["cmd.exe", "/c", updater_bat], shell=True)
+            self._safe_after(400, self.destroy)
+        except Exception as e:
+            self.adb.log(f"Auto-update failed: {e}", "ERROR")
+
+    # ---------------------------------------------------------
+    # Support & Socials Dialog
+    # ---------------------------------------------------------
+    def _open_support_dialog(self):
+        diag = ctk.CTkToplevel(self)
+        diag.title("About & Developer Support")
+        diag.geometry("500x420")
+        diag.resizable(False, False)
+        diag.configure(fg_color=self.M3_SURFACE)
+        diag.transient(self)
+
+        frame = ctk.CTkFrame(diag, fg_color="transparent")
+        frame.pack(fill="both", expand=True, padx=24, pady=20)
+
+        if self.img_logo:
+            ctk.CTkLabel(frame, image=self.img_logo, text="").pack(pady=(0, 6))
+
+        ctk.CTkLabel(frame, text=f"{APP_TITLE} v{APP_VERSION}", font=ctk.CTkFont(size=18, weight="bold"), text_color=self.M3_ON_SURFACE).pack()
+        ctk.CTkLabel(frame, text="Created by Sarthak Sinha (RookieEnough)", font=ctk.CTkFont(size=12), text_color=self.M3_TERTIARY).pack(pady=(2, 10))
+
+        ctk.CTkLabel(frame, text="Support Open-Source Development (Donation Links):", font=ctk.CTkFont(size=11, weight="bold"), text_color=self.M3_PRIMARY).pack(anchor="w", pady=(10, 4))
+
+        don_row = ctk.CTkFrame(frame, fg_color="transparent")
+        don_row.pack(fill="x", pady=4)
+
+        for name, url, color in DONATION_LINKS:
+            ctk.CTkButton(
+                don_row,
+                text=name,
+                height=32,
+                fg_color=color,
+                hover_color=color,
+                text_color="#FFFFFF",
+                font=ctk.CTkFont(size=11, weight="bold"),
+                corner_radius=16,
+                command=lambda u=url: webbrowser.open(u)
+            ).pack(side="left", padx=(0, 8))
+
+        ctk.CTkLabel(frame, text="Community & Socials:", font=ctk.CTkFont(size=11, weight="bold"), text_color=self.M3_PRIMARY).pack(anchor="w", pady=(14, 4))
+
+        soc_row = ctk.CTkFrame(frame, fg_color="transparent")
+        soc_row.pack(fill="x", pady=4)
+
+        for name, url, color in SOCIAL_LINKS:
+            ctk.CTkButton(
+                soc_row,
+                text=name,
+                height=32,
+                fg_color=self.M3_SURFACE_CONTAINER_HIGH,
+                text_color=self.M3_ON_SURFACE,
+                font=ctk.CTkFont(size=11),
+                corner_radius=16,
+                command=lambda u=url: webbrowser.open(u)
+            ).pack(side="left", padx=(0, 6))
+
+        ctk.CTkLabel(frame, text="Strictly for educational and research purposes.\nAll trademarks belong to their respective owners.", font=ctk.CTkFont(size=10), text_color=self.M3_ON_SURFACE_MUTED, justify="center").pack(side="bottom", pady=(10, 0))
+
 JioDatsugokuApp = JioToolboxApp
 
 def main():

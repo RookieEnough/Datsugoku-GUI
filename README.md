@@ -1,14 +1,38 @@
-# Datsugoku GUI
+<div align="center">
 
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Android%20TV%209.0-blue.svg?style=flat-square)](https://github.com/RookieEnough/Datsugoku-GUI)
-[![Target](https://img.shields.io/badge/Hardware-Jio%20STB%20(JHSC200%20%2F%20JHSD200)-orange.svg?style=flat-square)](https://github.com/RookieEnough/Datsugoku-GUI)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg?style=flat-square)](https://www.python.org/)
-[![UI](https://img.shields.io/badge/Design-Material%20Design%203%20Expressive-purple.svg?style=flat-square)](https://m3.material.io/)
-[![License](https://img.shields.io/badge/License-MIT-lightgrey.svg?style=flat-square)](LICENSE)
+  <img src="app_icon.png" alt="Datsugoku GUI Logo" width="128" height="128" />
 
-An open-source desktop control station, diagnostic suite, and kernel input remapper designed for the **Jio Set-Top Box (JHSC200 / JHSD200)** running Android TV 9.0 (Pie). 
+  # Datsugoku GUI
 
-Datsugoku GUI provides a centralized, non-root management interface to unlock restricted hardware features, redirect hardcoded remote control buttons, resolve OEM firmware limitations, monitor real-time system performance, and batch sideload third-party applications over local ADB networks.
+  <p align="center">
+    <b>Professional Desktop Control Suite & Kernel Input Remapper for Jio Android TV (JHSC200 / JHSD200)</b>
+  </p>
+
+  <p align="center">
+    <a href="https://github.com/RookieEnough/Datsugoku-GUI"><img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Android%20TV%209.0-238636.svg?style=flat-square" alt="Platform" /></a>
+    &nbsp;
+    <a href="https://github.com/RookieEnough/Datsugoku-GUI"><img src="https://img.shields.io/badge/Hardware-Jio%20STB%20(JHSC200%20%2F%20JHSD200)-d97706.svg?style=flat-square" alt="Hardware" /></a>
+    &nbsp;
+    <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10%2B-0284c7.svg?style=flat-square" alt="Python" /></a>
+    &nbsp;
+    <a href="https://m3.material.io/"><img src="https://img.shields.io/badge/Design-Material%203%20Expressive-7c3aed.svg?style=flat-square" alt="Design" /></a>
+    &nbsp;
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-475569.svg?style=flat-square" alt="License" /></a>
+  </p>
+
+  <p align="center">
+    <a href="https://github.com/RookieEnough/Datsugoku-GUI/releases/latest"><b>Download Executable (v1.0.0)</b></a> •
+    <a href="#architectural-overview">Architecture</a> •
+    <a href="#key-engineering-features">Key Features</a> •
+    <a href="#installation--setup">Installation</a> •
+    <a href="#troubleshooting--diagnostics">Troubleshooting</a>
+  </p>
+
+  <p align="center">
+    An open-source desktop control station, diagnostic suite, and kernel input remapper designed for the <b>Jio Set-Top Box (JHSC200 / JHSD200)</b> running Android TV 9.0 (Pie). Datsugoku GUI provides a centralized, non-root management interface to unlock restricted hardware features, redirect hardcoded remote control buttons, resolve OEM firmware limitations, monitor real-time system performance, and batch sideload third-party applications over local ADB networks.
+  </p>
+
+</div>
 
 ---
 
